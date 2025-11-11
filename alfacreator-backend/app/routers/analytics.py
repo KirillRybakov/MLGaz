@@ -37,7 +37,6 @@ async def upload_file_for_analysis(
 
     return TaskResponse(task_id=task_id, status="processing")
 
-
 @router.get("/results/{task_id}", response_model=TaskStatusResponse)
 async def get_analysis_results(task_id: str):
     """
@@ -47,4 +46,5 @@ async def get_analysis_results(task_id: str):
     if not task:
         raise HTTPException(status_code=404, detail="Задача с таким ID не найдена")
 
-    return TaskStatusResponse(**task)
+    # Pydantic теперь сам разберется, какой тип у result
+    return TaskStatusResponse(status=task.get("status"), result=task.get("result"))

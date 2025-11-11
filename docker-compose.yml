@@ -1,17 +1,36 @@
+# Alphahack/docker-compose.yml
+
 services:
+  # 1. Сервис нейросети (Ollama)
+  ollama:
+    build:
+      context: ./ollama
+    # Мы используем кастомный entrypoint, чтобы выполнить несколько команд
+    entrypoint: /bin/sh -c "ollama serve & (sleep 5 && ollama pull llama3:8b) & wait"
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+
+  # 2. Сервис бэкенда
   backend:
     build:
       context: ./alfacreator-backend
-      dockerfile: Dockerfile
     ports:
       - "8000:8000"
-    # Мы убрали network_mode: "host", чтобы backend был в той же сети, что и frontend
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
 
+  # 3. Сервис фронтенда
   frontend:
     build:
       context: ./alfacreator-frontend
-      dockerfile: Dockerfile
     ports:
       - "3000:80"
     depends_on:
       - backend
+
+volumes:
+  ollama_data:
