@@ -7,6 +7,7 @@ import AnalyticsDashboard from './modules/AnalyticsDashboard';
 import DocumentGenerator from './modules/DocumentGenerator';
 import { Toaster } from 'react-hot-toast';
 import SmartCalendar from './modules/SmartCalendar';
+import SmartAnalytics from './modules/SmartAnalytics';
 
 function App() {
   const [activeTab, setActiveTab] = useState('promo');
@@ -36,6 +37,9 @@ function App() {
           <button onClick={() => setActiveTab('calendar')} className={navButtonClasses('calendar')}>
             Умный календарь
           </button>
+          <button onClick={() => setActiveTab('smartAnalytics')} className={navButtonClasses('smartAnalytics')}>
+            Умная аналитика
+          </button>
         </div>
 
         <div className="max-w-3xl mx-auto">
@@ -43,6 +47,7 @@ function App() {
           {activeTab === 'analytics' && <AnalyticsDashboard />}
           {activeTab === 'documents' && <DocumentGenerator />}
           {activeTab === 'calendar' && <SmartCalendar />}
+          {activeTab === 'smartAnalytics' && <SmartAnalytics />} 
         </div>
       </main>
     </div>

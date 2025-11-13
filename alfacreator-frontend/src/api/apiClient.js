@@ -35,4 +35,12 @@ export const recommend_calendar = (data) => {
   return apiClient.post('/calendar/recommend', data);
 };
 
+export const analyzeBusiness = (data) => {
+  return apiClient.post('/analytics/smart', data, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
 export default apiClient;
