@@ -6,7 +6,10 @@ from loguru import logger
 import sys
 
 # Импортируем все наши роутеры
-from app.routers import promo, analytics, documents, calendar
+from app.routers import promo, analytics, documents, smart_analytics, history
+# Импортируем все для работы с БД
+from app.database import engine, Base
+from app import models
 
 app = FastAPI(
     title="Альфа-Креатор API",
@@ -14,10 +17,16 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Настройка CORS для разрешения запросов с фронтенда
+# Создание таблиц БД при запуске приложения
+@app.on_event("startup")
+async def startup():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+# Настройка CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Для хакатона безопасно, для продакшена стоит указать конкретные домены
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,4 +45,5 @@ def read_root():
 app.include_router(promo.router, prefix="/api/v1/promo", tags=["Промо-материалы"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Аналитика"])
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["Документы"])
-app.include_router(calendar.router, prefix="/api/v1/calendar", tags=["Умный календарь"])
+app.include_router(smart_analytics.router, prefix="/api/v1/smart_analytics", tags=["Умная Аналитика"])
+app.include_router(history.router, prefix="/api/v1/history", tags=["История"])

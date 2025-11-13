@@ -5,10 +5,11 @@ import Header from './components/Header';
 import PromoGenerator from './modules/PromoGenerator';
 import AnalyticsDashboard from './modules/AnalyticsDashboard';
 import DocumentGenerator from './modules/DocumentGenerator';
+import SmartAnalytics from './modules/SmartAnalytics';
 import { Toaster } from 'react-hot-toast';
-import SmartCalendar from './modules/SmartCalendar';
 
 function App() {
+  // Убедимся, что начальное состояние соответствует одной из кнопок
   const [activeTab, setActiveTab] = useState('promo');
 
   const navButtonClasses = (tabName) =>
@@ -23,26 +24,35 @@ function App() {
       <Toaster position="top-center" reverseOrder={false} />
       <Header />
       <main className="container mx-auto p-4 md:p-6">
-        <div className="mb-6 flex justify-center space-x-2 md:space-x-4">
+        <div className="mb-6 flex flex-wrap justify-center gap-2 md:gap-4">
+
+          {/* Проверяем все имена в onClick */}
           <button onClick={() => setActiveTab('promo')} className={navButtonClasses('promo')}>
             Генератор Промо
           </button>
+
           <button onClick={() => setActiveTab('analytics')} className={navButtonClasses('analytics')}>
-            Аналитика
+            Аналитика CSV
           </button>
+
           <button onClick={() => setActiveTab('documents')} className={navButtonClasses('documents')}>
             Шаблоны
           </button>
-          <button onClick={() => setActiveTab('calendar')} className={navButtonClasses('calendar')}>
-            Умный календарь
+
+          <button onClick={() => setActiveTab('smart_analytics')} className={navButtonClasses('smart_analytics')}>
+            Умная Аналитика
           </button>
+
         </div>
 
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-6xl mx-auto">
+
+          {/* Проверяем все условия рендеринга */}
           {activeTab === 'promo' && <PromoGenerator />}
           {activeTab === 'analytics' && <AnalyticsDashboard />}
           {activeTab === 'documents' && <DocumentGenerator />}
-          {activeTab === 'calendar' && <SmartCalendar />}
+          {activeTab === 'smart_analytics' && <SmartAnalytics />}
+
         </div>
       </main>
     </div>

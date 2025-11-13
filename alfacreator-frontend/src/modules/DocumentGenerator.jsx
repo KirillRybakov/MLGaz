@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import Loader from '../components/Loader';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import { saveAs } from 'file-saver';
+import HistorySidebar from './HistorySidebar';
 
 // --- ПОЛНАЯ СТРУКТУРА ПОЛЕЙ ДЛЯ ВСЕХ 7 ШАБЛОНОВ ---
 const TEMPLATE_FIELDS = {
@@ -145,7 +146,7 @@ const validateForm = (fields, formData) => {
 
       switch(rule.type) {
         case 'number':
-          if (!/^\d+(\.\d+)?$/.test(value)) error = rule.message; // Allow decimals
+          if (!/^\d+(\.\d+)?$/.test(value)) error = rule.message;
           break;
         case 'date':
           if (!/^\d{2}\.\d{2}\.\d{4}$/.test(value)) error = rule.message;
@@ -170,6 +171,7 @@ const DocumentGenerator = (props) => {
   const [result, setResult] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [refreshHistory, setRefreshHistory] = useState(0);
 
   useEffect(() => {
     setFormData({});
@@ -205,6 +207,7 @@ const DocumentGenerator = (props) => {
       const response = await generateDocument({ template_name: template, details: formData });
       setResult(response.data.generated_text);
       toast.success('Документ успешно сгенерирован!');
+      setRefreshHistory(key => key + 1);
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Ошибка генерации документа.');
     } finally {
@@ -224,6 +227,13 @@ const DocumentGenerator = (props) => {
     Packer.toBlob(doc).then(blob => saveAs(blob, `${template}.docx`));
   };
 
+  const handleHistoryItemClick = (historyItem) => {
+    setResult(historyItem.output_data.generated_text);
+    setFormData(historyItem.input_data.details); // Заполняем форму старыми данными
+    setTemplate(historyItem.input_data.template_name); // Выбираем правильный шаблон
+    toast.success("Результат из истории загружен!");
+  };
+
   const currentFields = TEMPLATE_FIELDS[template] || [];
   const groupedFields = currentFields.reduce((acc, field) => {
     const group = field.group || 'Основные данные';
@@ -233,89 +243,94 @@ const DocumentGenerator = (props) => {
   }, {});
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">Генератор документов</h2>
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Выберите шаблон</label>
-          <select
-            value={template}
-            onChange={(e) => setTemplate(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
-          >
-            <option value="invoice">Счет на оплату (профессиональный)</option>
-            <option value="service_contract">Договор оказания услуг (профессиональный)</option>
-            <option value="completion_act">Акт выполненных работ (профессиональный)</option>
-            <option value="employment_contract">Трудовой договор (упрощенный)</option>
-            <option value="supply_contract">Договор поставки</option>
-            <option value="memo">Служебная записка</option>
-            <option value="power_of_attorney">Доверенность</option>
-          </select>
-        </div>
+    <div className="flex flex-col lg:flex-row">
+      <div className="w-full lg:w-2/3">
+        <div className="bg-white p-6 rounded-lg shadow-lg">
+          <h2 className="text-2xl font-bold mb-4 text-gray-800">Генератор документов</h2>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Выберите шаблон</label>
+              <select
+                value={template}
+                onChange={(e) => setTemplate(e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
+              >
+                <option value="invoice">Счет на оплату (профессиональный)</option>
+                <option value="service_contract">Договор оказания услуг (профессиональный)</option>
+                <option value="completion_act">Акт выполненных работ (профессиональный)</option>
+                <option value="employment_contract">Трудовой договор (упрощенный)</option>
+                <option value="supply_contract">Договор поставки</option>
+                <option value="memo">Служебная записка</option>
+                <option value="power_of_attorney">Доверенность</option>
+              </select>
+            </div>
 
-        <div className="space-y-6">
-          {Object.entries(groupedFields).map(([groupName, fields]) => (
-            <div key={groupName} className="border-t pt-4">
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">{groupName}</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                {fields.map(field => {
-                  const isError = !!errors[field.name];
-                  const InputComponent = field.type === 'textarea' ? 'textarea' : 'input';
-                  return (
-                    <div key={field.name} className={field.type === 'textarea' ? 'md:col-span-2' : ''}>
-                      <label className="block text-sm font-medium text-gray-700">{field.label}</label>
-                      <InputComponent
-                        type="text"
-                        name={field.name}
-                        value={formData[field.name] || ''}
-                        onChange={handleInputChange}
-                        required
-                        rows="3"
-                        className={`mt-1 block w-full rounded-md shadow-sm ${
-                          isError
-                            ? 'border-red-500 ring-red-500 focus:border-red-500 focus:ring-red-500'
-                            : 'border-gray-300 focus:border-red-500 focus:ring-red-500'
-                        }`}
-                        placeholder={field.placeholder || field.label}
-                      />
-                      {isError && <p className="mt-1 text-sm text-red-600">{errors[field.name]}</p>}
-                    </div>
-                  );
-                })}
+            <div className="space-y-6">
+              {Object.entries(groupedFields).map(([groupName, fields]) => (
+                <div key={groupName} className="border-t pt-4">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">{groupName}</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                    {fields.map(field => {
+                      const isError = !!errors[field.name];
+                      const InputComponent = field.type === 'textarea' ? 'textarea' : 'input';
+                      return (
+                        <div key={field.name} className={field.type === 'textarea' ? 'md:col-span-2' : ''}>
+                          <label className="block text-sm font-medium text-gray-700">{field.label}</label>
+                          <InputComponent
+                            type="text"
+                            name={field.name}
+                            value={formData[field.name] || ''}
+                            onChange={handleInputChange}
+                            required
+                            rows="3"
+                            className={`mt-1 block w-full rounded-md shadow-sm ${
+                              isError
+                                ? 'border-red-500 ring-red-500 focus:border-red-500 focus:ring-red-500'
+                                : 'border-gray-300 focus:border-red-500 focus:ring-red-500'
+                            }`}
+                            placeholder={field.placeholder || field.label}
+                          />
+                          {isError && <p className="mt-1 text-sm text-red-600">{errors[field.name]}</p>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 disabled:bg-gray-400"
+            >
+              {isLoading ? 'Генерация...' : 'Сгенерировать документ'}
+            </button>
+          </form>
+
+          {isLoading && <div className="mt-6"><Loader text="ИИ заполняет документ..." /></div>}
+
+          {result && (
+            <div className="mt-6">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-xl font-semibold">Готовый документ:</h3>
+                <div className="flex space-x-2">
+                  <button onClick={copyToClipboard} className="text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1 px-3 rounded-lg">
+                    Копировать текст
+                  </button>
+                  <button onClick={handleDownloadDocx} className="text-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded-lg">
+                    Скачать .docx
+                  </button>
+                </div>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-md border whitespace-pre-wrap font-mono max-h-96 overflow-y-auto">
+                {result}
               </div>
             </div>
-          ))}
+          )}
         </div>
-
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 disabled:bg-gray-400"
-        >
-          {isLoading ? 'Генерация...' : 'Сгенерировать документ'}
-        </button>
-      </form>
-
-      {isLoading && <div className="mt-6"><Loader text="ИИ заполняет документ..." /></div>}
-
-      {result && (
-        <div className="mt-6">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-xl font-semibold">Готовый документ:</h3>
-            <div className="flex space-x-2">
-              <button onClick={copyToClipboard} className="text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1 px-3 rounded-lg">
-                Копировать текст
-              </button>
-              <button onClick={handleDownloadDocx} className="text-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded-lg">
-                Скачать .docx
-              </button>
-            </div>
-          </div>
-          <div className="bg-gray-50 p-4 rounded-md border whitespace-pre-wrap font-mono max-h-96 overflow-y-auto">
-            {result}
-          </div>
-        </div>
-      )}
+      </div>
+      <HistorySidebar type="document" refreshKey={refreshHistory} onItemClick={handleHistoryItemClick} />
     </div>
   );
 };

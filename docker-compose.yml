@@ -5,7 +5,6 @@ services:
   ollama:
     build:
       context: ./ollama
-    # Мы используем кастомный entrypoint, чтобы выполнить несколько команд
     entrypoint: /bin/sh -c "ollama serve & (sleep 5 && ollama pull llama3:8b) & wait"
     volumes:
       - ollama_data:/root/.ollama
@@ -22,6 +21,9 @@ services:
       - ollama
     environment:
       - OLLAMA_HOST=http://ollama:11434
+    volumes:
+      - ./database_data:/app/database_data
+
 
   # 3. Сервис фронтенда
   frontend:

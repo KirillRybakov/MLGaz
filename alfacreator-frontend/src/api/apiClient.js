@@ -1,38 +1,38 @@
-// alfacreator-frontend-old/src/api/apiClient.js
+// alfacreator-frontend/src/api/apiClient.js
+
 import axios from 'axios';
 
 const apiClient = axios.create({
-  // Теперь базовый URL - это просто /api/v1. Nginx сделает остальное.
   baseURL: '/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-export const generatePromo = (data) => {
-  return apiClient.post('/promo/generate', data);
-};
+export const generatePromo = (data) => apiClient.post('/promo/generate', data);
 
 export const uploadAnalyticsFile = (file) => {
   const formData = new FormData();
   formData.append('file', file);
   return apiClient.post('/analytics/upload', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
+    headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
 
-export const getAnalyticsResult = (taskId) => {
-  return apiClient.get(`/analytics/results/${taskId}`);
+export const getAnalyticsResult = (taskId) => apiClient.get(`/analytics/results/${taskId}`);
+
+export const generateDocument = (data) => apiClient.post('/documents/generate', data);
+
+// Вот функция, которую мы добавим/исправим
+export const runSmartAnalysis = (formData) => {
+  return apiClient.post('/smart_analytics/smart', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
 };
 
-export const generateDocument = (data) => {
-  return apiClient.post('/documents/generate', data);
+export const getHistory = (type) => {
+  return apiClient.get(`/history/?request_type=${type}`);
 };
 
-export const recommend_calendar = (data) => {
-  return apiClient.post('/calendar/recommend', data);
-};
-
-export default apiClient;
+// Удаляем экспорт по умолчанию, так как мы используем именованные экспорты
+// export default apiClient;

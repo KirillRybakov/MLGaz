@@ -1,4 +1,5 @@
-# app/routers/analytics.py
+# alfacreator-backend/app/routers/analytics.py
+
 import uuid
 import os
 from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException
@@ -9,19 +10,17 @@ import aiofiles
 router = APIRouter()
 UPLOAD_DIR = "temp_uploads"
 
+
 @router.on_event("startup")
 async def startup_event():
-    # Создаем папку для временных файлов при старте приложения
     os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 
 @router.post("/upload", response_model=TaskResponse, status_code=202)
 async def upload_file_for_analysis(
-    background_tasks: BackgroundTasks,
-    file: UploadFile = File(...)
+        background_tasks: BackgroundTasks,
+        file: UploadFile = File(...)
 ):
-    """
-    Загружает CSV-файл, запускает фоновую задачу для анализа и немедленно возвращает ID задачи.
-    """
     if not file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail="Поддерживаются только CSV файлы")
 
@@ -33,18 +32,17 @@ async def upload_file_for_analysis(
         await out_file.write(content)
 
     TASK_STORAGE[task_id] = {"status": "processing", "result": None}
-    background_tasks.add_task(process_sales_file, task_id, file_path)
+
+    # Передаем имя файла в фоновую задачу для сохранения в истории
+    input_data_for_history = {"filename": file.filename}
+    background_tasks.add_task(process_sales_file, task_id, file_path, input_data_for_history)
 
     return TaskResponse(task_id=task_id, status="processing")
 
+
 @router.get("/results/{task_id}", response_model=TaskStatusResponse)
 async def get_analysis_results(task_id: str):
-    """
-    Проверяет статус задачи и возвращает результат, если он готов.
-    """
     task = TASK_STORAGE.get(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Задача с таким ID не найдена")
-
-    # Pydantic теперь сам разберется, какой тип у result
     return TaskStatusResponse(status=task.get("status"), result=task.get("result"))
