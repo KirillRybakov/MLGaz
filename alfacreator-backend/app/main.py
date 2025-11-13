@@ -1,10 +1,12 @@
-# app/main.py
+# alfacreator-backend/app/main.py
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 import sys
 
-from app.routers import promo, analytics, documents
+# Импортируем все наши роутеры
+from app.routers import promo, analytics, documents, calendar
 
 app = FastAPI(
     title="Альфа-Креатор API",
@@ -12,7 +14,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Настройка CORS
+# Настройка CORS для разрешения запросов с фронтенда
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], # Для хакатона безопасно, для продакшена стоит указать конкретные домены
@@ -34,4 +36,4 @@ def read_root():
 app.include_router(promo.router, prefix="/api/v1/promo", tags=["Промо-материалы"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Аналитика"])
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["Документы"])
-app.include_router(documents.router, prefix="/api/v1/calendar", tags=["Календарь"])
+app.include_router(calendar.router, prefix="/api/v1/calendar", tags=["Умный календарь"])
