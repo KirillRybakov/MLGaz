@@ -32,6 +32,7 @@ SOCIAL_MEDIA_PARSERS: List[Dict[str, Any]] = [
     }
 ]
 
+
 async def analyze_social(link: str) -> Optional[SocialMediaInfo]:
     """
     Анализирует ссылку на соцсеть, извлекает платформу и идентификатор.
@@ -60,6 +61,6 @@ async def analyze_social(link: str) -> Optional[SocialMediaInfo]:
                     identifier=identifier,
                     analysis_summary=summary
                 )
-    
+
     # 5. Если ни один парсер не подошел
     return None

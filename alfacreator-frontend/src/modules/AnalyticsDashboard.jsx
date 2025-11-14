@@ -1,25 +1,27 @@
+// alfacreator-frontend/src/modules/AnalyticsDashboard.jsx
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { uploadAnalyticsFile, getAnalyticsResult } from '../api/apiClient';
 import toast from 'react-hot-toast';
 import Loader from '../components/Loader';
+import HistorySidebar from './HistorySidebar';
 
 const AnalyticsDashboard = () => {
-  const [file, setFile] = useState(null);
-  const [status, setStatus] = useState('idle'); // idle, uploading, processing, success, error
+  const [status, setStatus] = useState('idle');
   const [taskId, setTaskId] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [refreshHistory, setRefreshHistory] = useState(0);
 
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles.length > 0) {
       const acceptedFile = acceptedFiles[0];
       if (acceptedFile.type !== 'text/csv') {
-          toast.error('Пожалуйста, загрузите файл в формате CSV.');
-          return;
+        toast.error('Пожалуйста, загрузите файл в формате CSV.');
+        return;
       }
-      setFile(acceptedFile);
       handleUpload(acceptedFile);
     }
   }, []);
@@ -54,6 +56,7 @@ const AnalyticsDashboard = () => {
             setResult(task.result);
             setStatus('success');
             toast.success('Анализ завершен!');
+            setRefreshHistory(key => key + 1);
             clearInterval(intervalId);
           } else if (task.status === 'error') {
             setError(task.result?.error_message || 'Произошла ошибка при анализе файла.');
@@ -66,24 +69,30 @@ const AnalyticsDashboard = () => {
           setStatus('error');
           clearInterval(intervalId);
         }
-      }, 3000); // Опрашиваем каждые 3 секунды
+      }, 3000);
     }
     return () => clearInterval(intervalId);
   }, [status, taskId]);
 
+  const handleHistoryItemClick = (historyItem) => {
+    setResult(historyItem.output_data);
+    setStatus('success');
+    toast.success("Результат из истории загружен!");
+  };
+
   const renderContent = () => {
     switch (status) {
       case 'uploading':
-        return <Loader text="Загрузка файла..." />;
+        return <div className="text-center py-10"><Loader text="Загрузка файла..." /></div>;
       case 'processing':
-        return <Loader text="Анализируем данные... Это может занять некоторое время." />;
+        return <div className="text-center py-10"><Loader text="Анализируем данные... Это может занять время." /></div>;
       case 'success':
         return (
           <div className="space-y-6">
             <div>
               <h3 className="text-xl font-semibold text-gray-800">Выводы и рекомендации ИИ:</h3>
               <div className="mt-2 bg-green-50 p-4 rounded-md border border-green-200">
-                <p className="text-gray-700">{result.insights}</p>
+                <p className="text-gray-700 whitespace-pre-wrap">{result.insights}</p>
               </div>
             </div>
             <div>
@@ -104,11 +113,11 @@ const AnalyticsDashboard = () => {
           </div>
         );
       case 'error':
-        return <p className="text-red-600 text-center">{error}</p>;
+        return <p className="text-red-600 text-center py-10">{error}</p>;
       case 'idle':
       default:
         return (
-          <div {...getRootProps()} className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-red-500">
+          <div {...getRootProps()} className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-red-500 transition-colors">
             <input {...getInputProps()} />
             {isDragActive ? (
               <p className="text-gray-600">Отпустите, чтобы загрузить...</p>
@@ -121,9 +130,14 @@ const AnalyticsDashboard = () => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">Аналитика продаж</h2>
-      {renderContent()}
+    <div className="flex flex-col lg:flex-row">
+      <div className="w-full lg:w-2/3">
+        <div className="bg-white p-6 rounded-lg shadow-lg">
+          <h2 className="text-2xl font-bold mb-4 text-gray-800">Аналитика продаж</h2>
+          {renderContent()}
+        </div>
+      </div>
+      <HistorySidebar type="analytics" refreshKey={refreshHistory} onItemClick={handleHistoryItemClick} />
     </div>
   );
 };

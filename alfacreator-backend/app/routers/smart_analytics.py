@@ -1,44 +1,43 @@
+# alfacreator-backend/app/routers/smart_analytics_router.py
+
 import io
 import json
 import pandas as pd
+import httpx
+
 from fastapi import (
     APIRouter, UploadFile, Form, HTTPException, Query, File, Depends
 )
 from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
-# Правильные импорты
-from app.services.social_parser import analyze_social
-from app.schemas.socialmedia import SocialMediaInfo # Убедитесь, что модель импортируется
+# --- ИСПРАВЛЕННЫЙ БЛОК ИМПОРТОВ ---
+from app.services import social_parser # Импортируем модуль целиком
+from app.schemas.socialmedia import SocialMediaInfo
 from app.core.llm_client import llm_client
+from app.database import get_db
+from app import crud
 
 router = APIRouter()
 
-# 1. Исправлена response_model
 @router.get("/analyze/social", response_model=SocialMediaInfo)
 async def get_social_analysis(link: str = Query(..., description="Ссылка на соцсеть для анализа")):
-    """
-    Анализирует предоставленную ссылку на социальную сеть.
-    """
-    analysis_result = await analyze_social(link)
-    
+    # Используем полный путь
+    analysis_result = await social_parser.analyze_social(link)
     if not analysis_result:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail="Не удалось распознать ссылку или соцсеть не поддерживается."
         )
-        
     return analysis_result
 
-# 2. Исправлен эндпоинт /smart
 @router.post("/smart")
 async def analyze_business(
-    file: Optional[UploadFile] = File(None), # Используйте File и Optional
-    link: Optional[str] = Form(None)
+        db: AsyncSession = Depends(get_db),
+        file: Optional[UploadFile] = File(None),
+        link: Optional[str] = Form(None)
 ):
-    """
-    Умный анализ бизнеса: данные клиента + соцсети + тренды.
-    """
     if not file and not link:
         raise HTTPException(status_code=400, detail="Необходимо предоставить файл или ссылку.")
 
@@ -51,9 +50,9 @@ async def analyze_business(
 
         social_data_summary = "Ссылка на соцсеть не указана."
         if link:
-            social_info = await analyze_social(link)
+            # Используем полный путь
+            social_info = await social_parser.analyze_social(link)
             if social_info:
-                # Берем только полезную для промпта часть!
                 social_data_summary = social_info.analysis_summary
             else:
                 social_data_summary = "Ссылка указана, но распознать соцсеть не удалось."
@@ -106,7 +105,15 @@ async def analyze_business(
         """
 
         result_str = await llm_client.generate_json_response(prompt)
-        
+        result_data = json.loads(result_str)
+
+        # --- ВОТ ЭТОТ БЛОК МЫ ЗАБЫЛИ ---
+        await crud.create_history_entry(
+            db=db,
+            request_type="smart_analytics",
+            input_data={"link": link, "filename": file.filename if file else "Нет файла"},
+            output_data=result_data
+        )
         # LLM возвращает строку. Ее нужно распарсить и вернуть как JSON.
         return JSONResponse(content=json.loads(result_str))
 
