@@ -9,6 +9,7 @@ from fastapi import (
     APIRouter, UploadFile, Form, HTTPException, Query, File, Depends
 )
 from fastapi.responses import JSONResponse
+from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
@@ -18,6 +19,8 @@ from app.schemas.socialmedia import SocialMediaInfo
 from app.core.llm_client import llm_client
 from app.database import get_db
 from app import crud
+from app.core.dependencies import get_current_user
+from app.schemas.user import User as UserSchema
 
 router = APIRouter()
 
@@ -36,7 +39,8 @@ async def get_social_analysis(link: str = Query(..., description="Ссылка �
 async def analyze_business(
         db: AsyncSession = Depends(get_db),
         file: Optional[UploadFile] = File(None),
-        link: Optional[str] = Form(None)
+        link: Optional[str] = Form(None),
+        current_user: UserSchema = Depends(get_current_user)
 ):
     if not file and not link:
         raise HTTPException(status_code=400, detail="Необходимо предоставить файл или ссылку.")

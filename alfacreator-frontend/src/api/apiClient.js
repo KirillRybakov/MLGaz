@@ -34,5 +34,32 @@ export const getHistory = (type) => {
   return apiClient.get(`/history/?request_type=${type}`);
 };
 
+// Interceptor для автоматического добавления токена в заголовки
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Функции для аутентификации
+export const registerUser = (email, password) => {
+  return apiClient.post('/auth/register', { email, password });
+};
+
+export const loginUser = (email, password) => {
+  const formData = new FormData();
+  formData.append('username', email); // FastAPI OAuth2 требует 'username'
+  formData.append('password', password);
+  return apiClient.post('/auth/token', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
+export const getCurrentUserProfile = () => {
+  return apiClient.get('/auth/users/me');
+};
+
 // Удаляем экспорт по умолчанию, так как мы используем именованные экспорты
 // export default apiClient;

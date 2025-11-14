@@ -3,6 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from . import models
 from typing import Optional
+from app.schemas import user as user_schema
+from app.core.security import get_password_hash
 
 
 async def create_history_entry(db: AsyncSession, request_type: str, input_data: dict, output_data: dict):
@@ -22,3 +24,17 @@ async def get_history_entries(db: AsyncSession, request_type: Optional[str] = No
 
     result = await db.execute(query)
     return result.scalars().all()
+
+
+async def get_user_by_email(db: AsyncSession, email: str):
+    # Используем асинхронный подход с select и execute
+    result = await db.execute(select(models.User).filter(models.User.email == email))
+    return result.scalars().first()
+
+async def create_user(db: AsyncSession, user: user_schema.UserCreate):
+    hashed_password = get_password_hash(user.password)
+    db_user = models.User(email=user.email, hashed_password=hashed_password)
+    db.add(db_user)
+    await db.commit()
+    await db.refresh(db_user)
+    return db_user
