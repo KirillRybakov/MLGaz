@@ -1,25 +1,15 @@
-# alfacreator-backend/app/services/analytics_processor.py
-
 import pandas as pd
 import json
 from loguru import logger
 from app.core.llm_client import llm_client
-from app.database import engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import AsyncSession
+from app.database import AsyncSessionLocal 
+from app.schemas import history as history_schema
 from app import crud
 
-AsyncSessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine,
-    class_=AsyncSession
-)
 
 TASK_STORAGE = {}
 
-
-async def process_sales_file(task_id: str, file_path: str, input_data: dict):
+async def process_sales_file(task_id: str, file_path: str, user_id: int):
     async with AsyncSessionLocal() as db:
         try:
             logger.info(f"[{task_id}] Начало обработки файла: {file_path}")
@@ -48,18 +38,21 @@ async def process_sales_file(task_id: str, file_path: str, input_data: dict):
             llm_response_str = await llm_client.generate_json_response(prompt)
             llm_response_data = json.loads(llm_response_str)
 
-            # --- СОХРАНЯЕМ В ИСТОРИЮ ---
-            await crud.create_history_entry(
-                db=db,
-                request_type="analytics",
-                input_data=input_data,
-                output_data=llm_response_data
-            )
-            # -------------------------
 
+            filename = file_path.split(f"{task_id}_")[-1]
+
+            history_entry_data = history_schema.HistoryCreate(
+                request_type="analytics", # Тип истории
+                input_data={"filename": filename},
+                output_data=llm_response_data # Сохраняем весь ответ от LLM
+            )
+            
+            await crud.create_history_entry(db=db, user_id=user_id, entry=history_entry_data)
+
+            # Обновляем статус задачи с полным результатом
             TASK_STORAGE[task_id] = {"status": "complete", "result": llm_response_data}
             logger.info(f"[{task_id}] Обработка завершена успешно.")
 
         except Exception as e:
-            logger.error(f"[{task_id}] Ошибка при обработке файла: {e}")
+            logger.error(f"[{task_id}] Ошибка при обработке файла: {e}", exc_info=True)
             TASK_STORAGE[task_id] = {"status": "error", "result": {"error_message": str(e)}}
