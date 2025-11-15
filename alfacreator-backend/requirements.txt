@@ -10,3 +10,10 @@ ollama
 sqlalchemy
 aiosqlite
 httpx
+#Все библиотеки, представленные нижк нужны для парсера и не обязательны к установки для запуска проекта
+sentence-transformers
+chromadb
+pypdf
+python-docx
+langchain-core
+langchain-text-splitters

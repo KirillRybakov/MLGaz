@@ -7,7 +7,7 @@ import AnalyticsDashboard from './modules/AnalyticsDashboard';
 import DocumentGenerator from './modules/DocumentGenerator';
 import SmartAnalytics from './modules/SmartAnalytics';
 import { Toaster } from 'react-hot-toast';
-
+import ChatWidget from './modules/ChatWidget';
 function App() {
   // Убедимся, что начальное состояние соответствует одной из кнопок
   const [activeTab, setActiveTab] = useState('promo');
@@ -42,9 +42,7 @@ function App() {
           <button onClick={() => setActiveTab('smart_analytics')} className={navButtonClasses('smart_analytics')}>
             Умная Аналитика
           </button>
-
         </div>
-
         <div className="max-w-6xl mx-auto">
 
           {/* Проверяем все условия рендеринга */}
@@ -55,6 +53,7 @@ function App() {
 
         </div>
       </main>
+      <ChatWidget />
     </div>
   );
 }
