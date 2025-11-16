@@ -10,7 +10,11 @@ ollama
 sqlalchemy
 aiosqlite
 httpx
-#Все библиотеки, представленные нижк нужны для парсера и не обязательны к установки для запуска проекта
+passlib
+bcrypt==4.0.1
+python-jose[cryptography]
+pydantic[email]
+#Все библиотеки, представленные ниже, нужны для парсера и не обязательны к установке для запуска проекта
 sentence-transformers
 chromadb
 pypdf
