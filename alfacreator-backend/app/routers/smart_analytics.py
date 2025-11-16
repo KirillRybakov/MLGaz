@@ -8,6 +8,7 @@ from fastapi import (
     APIRouter, UploadFile, Form, HTTPException, Query, File, Depends
 )
 from fastapi.responses import JSONResponse
+from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
@@ -17,6 +18,10 @@ from app.schemas.socialmedia import SocialMediaInfo
 from app.core.llm_client import llm_client
 from app.database import get_db
 from app import crud
+from app.core.dependencies import get_db, get_current_user
+from app.schemas.user import User as UserSchema
+from app.schemas import history as history_schema
+
 
 router = APIRouter()
 
@@ -36,7 +41,8 @@ async def get_social_analysis(link: str = Query(..., description="Ссылка �
 async def analyze_business(
         db: AsyncSession = Depends(get_db),
         file: Optional[UploadFile] = File(None),
-        link: Optional[str] = Form(None)
+        link: Optional[str] = Form(None),
+        current_user: UserSchema = Depends(get_current_user)
 ):
     if not file and not link:
         raise HTTPException(status_code=400, detail="Необходимо предоставить файл или ссылку.")
@@ -110,11 +116,19 @@ async def analyze_business(
         result_str = await llm_client.generate_json_response(prompt)
         result_data = json.loads(result_str)
 
+        # 1. Формируем Pydantic-объект HistoryCreate
+        input_data_for_history = {"link": link, "filename": file.filename if file else None}
+        history_entry_data = history_schema.HistoryCreate(
+            request_type="smart_analytics",
+            input_data=input_data_for_history,
+            output_data=result_data
+        )
+
         await crud.create_history_entry(
             db=db,
             request_type="smart_analytics",
-            input_data={"link": link, "filename": file.filename if file else None},
-            output_data=result_data
+            user_id=current_user.id,
+            entry=history_entry_data
         )
 
         return JSONResponse(content=result_data)

@@ -1,21 +1,23 @@
-# alfacreator-backend/app/schemas/history.py
-
 from pydantic import BaseModel
-from datetime import datetime
-from typing import Any, Dict
+from typing import Dict, Any
+import datetime
 
-# Эта конфигурация позволяет Pydantic читать данные из SQLAlchemy-объектов
-class Config:
-    from_attributes = True
 
+# 1. Базовая схема с полями, общими для создания и чтения
 class HistoryBase(BaseModel):
     request_type: str
     input_data: Dict[str, Any]
+
+
+class HistoryCreate(HistoryBase):
     output_data: Dict[str, Any]
+
 
 class History(HistoryBase):
     id: int
-    created_at: datetime
+    user_id: int
+    output_data: Dict[str, Any]
+    created_at: datetime.datetime
 
-    class Config(Config):
-        pass # Наследуем конфигурацию
+    class Config:
+        from_attributes = True # Для совместимости с моделями SQLAlchemy

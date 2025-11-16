@@ -1,10 +1,10 @@
-# alfacreator-backend/app/routers/analytics.py
-
 import uuid
 import os
-from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException
+from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException, Depends
 from app.schemas.analytics import TaskResponse, TaskStatusResponse
 from app.services.analytics_processor import process_sales_file, TASK_STORAGE
+from app.core.dependencies import get_current_user
+from app.schemas.user import User as UserSchema
 import aiofiles
 
 router = APIRouter()
@@ -19,7 +19,9 @@ async def startup_event():
 @router.post("/upload", response_model=TaskResponse, status_code=202)
 async def upload_file_for_analysis(
         background_tasks: BackgroundTasks,
-        file: UploadFile = File(...)
+        file: UploadFile = File(...),
+        current_user: UserSchema = Depends(get_current_user)
+
 ):
     if not file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail="Поддерживаются только CSV файлы")
@@ -33,9 +35,12 @@ async def upload_file_for_analysis(
 
     TASK_STORAGE[task_id] = {"status": "processing", "result": None}
 
-    # Передаем имя файла в фоновую задачу для сохранения в истории
-    input_data_for_history = {"filename": file.filename}
-    background_tasks.add_task(process_sales_file, task_id, file_path, input_data_for_history)
+    background_tasks.add_task(
+        process_sales_file, 
+        task_id=task_id, 
+        file_path=file_path, 
+        user_id=current_user.id
+    )
 
     return TaskResponse(task_id=task_id, status="processing")
 
