@@ -4,7 +4,6 @@ import io
 import json
 import pandas as pd
 import httpx
-
 from fastapi import (
     APIRouter, UploadFile, Form, HTTPException, Query, File, Depends
 )
@@ -12,8 +11,8 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
-# --- ИСПРАВЛЕННЫЙ БЛОК ИМПОРТОВ ---
-from app.services import social_parser # Импортируем модуль целиком
+# --- Правильные импорты ---
+from app.services import social_parser  # Импортируем модуль целиком
 from app.schemas.socialmedia import SocialMediaInfo
 from app.core.llm_client import llm_client
 from app.database import get_db
@@ -21,9 +20,9 @@ from app import crud
 
 router = APIRouter()
 
+
 @router.get("/analyze/social", response_model=SocialMediaInfo)
 async def get_social_analysis(link: str = Query(..., description="Ссылка на соцсеть для анализа")):
-    # Используем полный путь
     analysis_result = await social_parser.analyze_social(link)
     if not analysis_result:
         raise HTTPException(
@@ -31,6 +30,7 @@ async def get_social_analysis(link: str = Query(..., description="Ссылка �
             detail="Не удалось распознать ссылку или соцсеть не поддерживается."
         )
     return analysis_result
+
 
 @router.post("/smart")
 async def analyze_business(
@@ -41,22 +41,32 @@ async def analyze_business(
     if not file and not link:
         raise HTTPException(status_code=400, detail="Необходимо предоставить файл или ссылку.")
 
-    try:
-        user_data_summary = "Данные из файла не предоставлены."
-        if file:
-            contents = await file.read()
-            df = pd.read_csv(io.BytesIO(contents)) if file.filename.endswith(".csv") else pd.read_excel(io.BytesIO(contents))
+    # --- НОВАЯ ЛОГИКА ПРОВЕРКИ ---
+    user_data_summary = None
+    if file:
+        contents = await file.read()
+        try:
+            df = pd.read_csv(io.BytesIO(contents)) if file.filename.endswith(".csv") else pd.read_excel(
+                io.BytesIO(contents))
             user_data_summary = summarize_client_data(df)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Ошибка чтения файла: {e}")
 
-        social_data_summary = "Ссылка на соцсеть не указана."
-        if link:
-            # Используем полный путь
-            social_info = await social_parser.analyze_social(link)
-            if social_info:
-                social_data_summary = social_info.analysis_summary
-            else:
-                social_data_summary = "Ссылка указана, но распознать соцсеть не удалось."
+    social_data_summary = None
+    if link:
+        social_info = await social_parser.analyze_social(link)
+        if social_info:
+            social_data_summary = social_info.analysis_summary
 
+    # "ОХРАННИК": Если нет ни данных из файла, ни распознанной ссылки, возвращаем ошибку
+    if not user_data_summary and not social_data_summary:
+        raise HTTPException(
+            status_code=400,
+            detail="Не удалось получить данные. Пожалуйста, проверьте ссылку на соцсеть или загрузите корректный файл."
+        )
+    # ------------------------------
+
+    try:
         trends = await get_latest_trends()
 
         prompt = f"""
@@ -66,10 +76,10 @@ async def analyze_business(
 
         Проанализируй информацию о бизнесе клиента:
         📊 Клиентские данные:
-        {user_data_summary}
+        {user_data_summary or "Не предоставлены."}
 
-        🌐 Анализ соцсетей ({link}):
-        {social_data_summary}
+        🌐 Анализ соцсетей ({link or "Не указана"}):
+        {social_data_summary or "Не предоставлены или ссылка не распознана."}
 
         🔥 Актуальные тренды в России:
         {trends}
@@ -84,21 +94,14 @@ async def analyze_business(
             "Краткая ключевая рекомендация №1...",
             "Краткая ключевая рекомендация №2..."
         ],
-        "celNaNedelyu": "Сформулируй здесь главную цель на неделю (например, 'Привлечь 10 новых подписчиков из целевой аудитории через Reels').",
+        "celNaNedelyu": "Сформулируй здесь главную цель на неделю ",
         "kontentPlan": [
             {{
             "den": "Понедельник",
-            "tema": "Тема дня (например, 'Образовательный контент')",
-            "ideyaPosta": "Конкретная идея для поста (например, 'Видео-риллс: показываем, как правильно заваривать воронку V60. Крупные планы, эстетика.')",
+            "tema": "Тема дня ",
+            "ideyaPosta": "Конкретная идея для поста ",
             "format": "Reels",
-            "prizyvKDeystviyu": "Призыв к действию (например, 'Какой этап заваривания для вас самый сложный? Напишите в комментариях!')"
-            }},
-            {{
-            "den": "Вторник",
-            "tema": "...",
-            "ideyaPosta": "...",
-            "format": "...",
-            "prizyvKDeystviyu": "..."
+            "prizyvKDeystviyu": "Призыв к действию "
             }}
         ]
         }}
@@ -107,18 +110,16 @@ async def analyze_business(
         result_str = await llm_client.generate_json_response(prompt)
         result_data = json.loads(result_str)
 
-        # --- ВОТ ЭТОТ БЛОК МЫ ЗАБЫЛИ ---
         await crud.create_history_entry(
             db=db,
             request_type="smart_analytics",
-            input_data={"link": link, "filename": file.filename if file else "Нет файла"},
+            input_data={"link": link, "filename": file.filename if file else None},
             output_data=result_data
         )
-        # LLM возвращает строку. Ее нужно распарсить и вернуть как JSON.
-        return JSONResponse(content=json.loads(result_str))
+
+        return JSONResponse(content=result_data)
 
     except Exception as e:
-        # Используйте HTTPException для корректной отправки кодов ошибок
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -126,11 +127,14 @@ def summarize_client_data(df: pd.DataFrame) -> str:
     """
     Простейший анализ CSV/Excel — структура, количество записей, средние значения.
     """
-    info = f"Найдено {len(df)} строк. Колонки: {', '.join(df.columns)}."
-    if "amount" in df.columns:
-        avg_amount = df["amount"].mean()
-        info += f" Средний чек: {avg_amount:.2f}."
-    return info
+    try:
+        info = f"Найдено {len(df)} строк. Колонки: {', '.join(df.columns)}."
+        if "amount" in df.columns and pd.api.types.is_numeric_dtype(df["amount"]):
+            avg_amount = df["amount"].mean()
+            info += f" Средний чек: {avg_amount:.2f}."
+        return info
+    except Exception:
+        return "Не удалось проанализировать структуру файла."
 
 
 async def get_latest_trends() -> str:
