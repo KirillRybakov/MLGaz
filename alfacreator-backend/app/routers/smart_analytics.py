@@ -126,7 +126,6 @@ async def analyze_business(
 
         await crud.create_history_entry(
             db=db,
-            request_type="smart_analytics",
             user_id=current_user.id,
             entry=history_entry_data
         )
