@@ -2,7 +2,7 @@ import pandas as pd
 import json
 from loguru import logger
 from app.core.llm_client import llm_client
-from app.database import AsyncSessionLocal 
+from app.database import AsyncSessionLocal
 from app.schemas import history as history_schema
 from app import crud
 

@@ -1,9 +1,15 @@
-# alfacreator-backend/app/routers/smm_bot_router.py
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-from app.services.rag_service import get_bot_response  # <-- Важно, что этот сервис уже умеет работать с текстом
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.dependencies import get_db, get_current_user
+from app.schemas import user as user_schema
+from app.schemas import history as history_schema
+from app import crud
+
+from app.services.rag_service import get_bot_response
 from app.core.llm_client import llm_client
+
 
 router = APIRouter()
 
@@ -14,19 +20,46 @@ class ChatResponse(BaseModel):
 
 @router.post("/chat", response_model=ChatResponse)
 async def handle_chat_message(
+        # ▼▼▼ 2. ДОБАВЛЯЕМ ЗАВИСИМОСТИ ДЛЯ ЗАЩИТЫ И РАБОТЫ С БД ▼▼▼
+        db: AsyncSession = Depends(get_db),
+        current_user: user_schema.User = Depends(get_current_user),
+        # ▲▲▲ КОНЕЦ ЗАВИСИМОСТЕЙ ▲▲▲
         message: str = Form(""),
         file: Optional[UploadFile] = File(None)
 ):
+    if not message and not file:
+        raise HTTPException(status_code=400, detail="Сообщение или файл должны быть предоставлены.")
+
     query = message
+    input_data_for_history = {"message": message} # Готовим данные для истории
 
     if file:
-        # Здесь мы должны извлечь текст из файла и добавить его к запросу
-        # Это потребует доработки rag_service, пока просто добавим уведомление
-        # В реальном проекте здесь будет вызов parse_pdf/parse_docx
+        # Ваша логика обработки файла. Для истории сохраним только имя файла.
         contents = await file.read()
-        # file_text = parse_document(contents, file.filename) # Псевдокод
-        file_text = f"\n\n--- НАЧАЛО СОДЕРЖИМОГО ФАЙЛА {file.filename} ---\n[...содержимое файла...]\n--- КОНЕЦ ФАЙЛА ---"
+        file_text = f"\n\n--- Приложен файл: {file.filename} ---"
         query += file_text
+        input_data_for_history["filename"] = file.filename
 
-    bot_reply = await get_bot_response(query, llm_client)
+    # ▼▼▼ 3. ПЕРЕДАЕМ ID ПОЛЬЗОВАТЕЛЯ В СЕРВИС (ВАЖНО ДЛЯ КОНТЕКСТА) ▼▼▼
+    # Это позволит сервису в будущем хранить и извлекать историю 
+    # диалога для конкретного пользователя.
+    bot_reply = await get_bot_response(
+        query=query, 
+        llm_client=llm_client,
+        user_id=current_user.id # <--- Передаем ID
+    )
+    # ▲▲▲ КОНЕЦ ПЕРЕДАЧИ ID ▲▲▲
+
+    # ▼▼▼ 4. СОХРАНЯЕМ ДИАЛОГ В ИСТОРИЮ ▼▼▼
+    history_entry_data = history_schema.HistoryCreate(
+        request_type="smm_bot",
+        input_data=input_data_for_history,
+        output_data={"reply": bot_reply}
+    )
+    await crud.create_history_entry(
+        db=db,
+        user_id=current_user.id,
+        entry=history_entry_data
+    )
+
     return ChatResponse(reply=bot_reply)
