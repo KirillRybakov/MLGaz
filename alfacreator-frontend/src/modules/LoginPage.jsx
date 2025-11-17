@@ -1,4 +1,3 @@
-// src/modules/LoginPage.jsx
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
@@ -12,7 +11,6 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Определяем, куда перенаправить пользователя после входа
   const from = location.state?.from?.pathname || "/";
 
   const handleSubmit = async (e) => {
@@ -25,7 +23,7 @@ const LoginPage = () => {
     try {
       await login(email, password);
       toast.success('Вход выполнен успешно!');
-      navigate(from, { replace: true }); // Перенаправляем на нужную страницу
+      navigate(from, { replace: true }); 
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Неверный email или пароль.');
     } finally {
