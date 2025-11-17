@@ -3,7 +3,6 @@ from typing import Dict, Any
 import datetime
 
 
-# 1. Базовая схема с полями, общими для создания и чтения
 class HistoryBase(BaseModel):
     request_type: str
     input_data: Dict[str, Any]
@@ -20,4 +19,4 @@ class History(HistoryBase):
     created_at: datetime.datetime
 
     class Config:
-        from_attributes = True # Для совместимости с моделями SQLAlchemy
+        from_attributes = True
