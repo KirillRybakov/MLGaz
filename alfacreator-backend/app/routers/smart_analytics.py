@@ -1,5 +1,3 @@
-# alfacreator-backend/app/routers/smart_analytics_router.py
-
 import io
 import json
 import pandas as pd
@@ -12,8 +10,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
-# --- Правильные импорты ---
-from app.services import social_parser  # Импортируем модуль целиком
+from app.services import social_parser
 from app.schemas.socialmedia import SocialMediaInfo
 from app.core.llm_client import llm_client
 from app.database import get_db
@@ -47,7 +44,7 @@ async def analyze_business(
     if not file and not link:
         raise HTTPException(status_code=400, detail="Необходимо предоставить файл или ссылку.")
 
-    # --- НОВАЯ ЛОГИКА ПРОВЕРКИ ---
+
     user_data_summary = None
     if file:
         contents = await file.read()
@@ -64,13 +61,12 @@ async def analyze_business(
         if social_info:
             social_data_summary = social_info.analysis_summary
 
-    # "ОХРАННИК": Если нет ни данных из файла, ни распознанной ссылки, возвращаем ошибку
+
     if not user_data_summary and not social_data_summary:
         raise HTTPException(
             status_code=400,
             detail="Не удалось получить данные. Пожалуйста, проверьте ссылку на соцсеть или загрузите корректный файл."
         )
-    # ------------------------------
 
     try:
         trends = await get_latest_trends()
@@ -116,7 +112,6 @@ async def analyze_business(
         result_str = await llm_client.generate_json_response(prompt)
         result_data = json.loads(result_str)
 
-        # 1. Формируем Pydantic-объект HistoryCreate
         input_data_for_history = {"link": link, "filename": file.filename if file else None}
         history_entry_data = history_schema.HistoryCreate(
             request_type="smart_analytics",
@@ -137,9 +132,6 @@ async def analyze_business(
 
 
 def summarize_client_data(df: pd.DataFrame) -> str:
-    """
-    Простейший анализ CSV/Excel — структура, количество записей, средние значения.
-    """
     try:
         info = f"Найдено {len(df)} строк. Колонки: {', '.join(df.columns)}."
         if "amount" in df.columns and pd.api.types.is_numeric_dtype(df["amount"]):
@@ -151,9 +143,6 @@ def summarize_client_data(df: pd.DataFrame) -> str:
 
 
 async def get_latest_trends() -> str:
-    """
-    Получение трендов (пока заглушка, но можно подключить реальный API).
-    """
     try:
         async with httpx.AsyncClient() as client:
             res = await client.get("https://trends.google.com/trending/rss?geo=RU")
