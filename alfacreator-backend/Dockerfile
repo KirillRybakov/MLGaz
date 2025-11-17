@@ -1,5 +1,3 @@
-# Dockerfile
-
 # 1. Базовый образ
 FROM python:3.10-slim
 
@@ -10,7 +8,6 @@ WORKDIR /app
 # RUN apt-get update && apt-get install -y ...
 
 # 4. Установка переменных окружения
-# Позволяет Python выводить логи сразу, без буферизации
 ENV PYTHONUNBUFFERED 1
 
 # 5. Копирование файлов зависимостей и их установка
