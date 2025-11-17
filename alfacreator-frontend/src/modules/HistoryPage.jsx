@@ -1,10 +1,8 @@
-// modules/HistoryPage.jsx
 import React, { useState, useEffect } from 'react';
 import { getHistory } from '../api/apiClient';
 import Loader from '../components/Loader';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-// Маленькие компоненты для отображения разных типов истории
 const PromoHistoryItem = ({ item }) => (
   <>
     <h4 className="font-semibold text-gray-600">Входные данные:</h4>
