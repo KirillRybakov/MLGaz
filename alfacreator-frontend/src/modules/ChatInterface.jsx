@@ -1,4 +1,3 @@
-// alfacreator-frontend/src/modules/ChatInterface.jsx
 import React, { useState } from 'react';
 import { sendChatMessage } from '../api/apiClient';
 import toast from 'react-hot-toast';
