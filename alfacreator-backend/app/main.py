@@ -2,10 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 import sys
-
-# Импортируем все наши роутеры
 from app.routers import promo, analytics, documents, smart_analytics, history, smm_bot_router, auth
-# Импортируем все для работы с БД
 from app.database import engine, Base
 from app import models
 
@@ -16,13 +13,11 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Создание таблиц БД при запуске приложения
 @app.on_event("startup")
 async def startup():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-# Настройка CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -30,8 +25,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-#test
-# Настройка логирования
+
 logger.remove()
 logger.add(sys.stderr, level="INFO")
 logger.add("app.log", rotation="5 MB", level="DEBUG", encoding="utf-8")
@@ -40,7 +34,6 @@ logger.add("app.log", rotation="5 MB", level="DEBUG", encoding="utf-8")
 def read_root():
     return {"message": "Добро пожаловать в Альфа-Креатор API!"}
 
-# Подключение роутеров
 app.include_router(promo.router, prefix="/api/v1/promo", tags=["Промо-материалы"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Аналитика"])
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["Документы"])
