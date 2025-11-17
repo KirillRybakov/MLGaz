@@ -8,11 +8,11 @@ const Header = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login'); // Перенаправляем на страницу входа после выхода
+    navigate('/login');
   };
 
   const navLinkClasses = "font-semibold hover:text-red-200 transition-colors";
-  const activeNavLinkClasses = "text-white underline"; // Стиль для активной ссылки, если хотите
+  const activeNavLinkClasses = "text-white underline";
 
   return (
     <header className="bg-red-600 text-white p-4 shadow-md sticky top-0 z-50">
@@ -26,7 +26,7 @@ const Header = () => {
             <>
               <span className="hidden sm:block">Привет, {user?.email}!</span>
 
-              {/* ▼▼▼ ДОБАВЛЯЕМ ССЫЛКУ НА ПРОФИЛЬ ▼▼▼ */}
+              {/*ссылка на профиль*/}
               <NavLink 
                 to="/profile" 
                 className={({ isActive }) => `${navLinkClasses} ${isActive ? activeNavLinkClasses : 'text-red-100'}`}
