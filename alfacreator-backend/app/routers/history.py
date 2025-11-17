@@ -1,5 +1,3 @@
-# alfacreator-backend/app/routers/history.py
-
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
@@ -20,10 +18,6 @@ async def read_history_for_current_user(
     db: AsyncSession = Depends(get_db),
     current_user: user_schema.User = Depends(get_current_user),
 ):
-    """
-    Получает историю запросов для текущего аутентифицированного пользователя.
-    Можно отфильтровать по типу запроса.
-    """
 
     history_entries = await crud.get_history_entries(
         db=db, 
