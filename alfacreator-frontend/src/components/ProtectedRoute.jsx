@@ -7,7 +7,6 @@ const ProtectedRoute = ({ children }) => {
   const location = useLocation();
 
   if (!isAuthenticated) {
-    // Перенаправляем на страницу входа, запоминая, куда пользователь хотел попасть
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
