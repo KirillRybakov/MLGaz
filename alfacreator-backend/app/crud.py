@@ -1,4 +1,3 @@
-# alfacreator-backend/app/crud.py
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from . import models
@@ -10,8 +9,8 @@ from app.core.security import get_password_hash
 
 async def create_history_entry(db: AsyncSession, user_id: int, entry: history_schema.HistoryCreate):
     db_entry = models.History(
-        **entry.model_dump(), # Распаковываем данные из схемы
-        user_id=user_id # <-- Привязываем запись к пользователю
+        **entry.model_dump(),
+        user_id=user_id
     )
     db.add(db_entry)
     await db.commit()
@@ -35,7 +34,6 @@ async def get_history_entries(db: AsyncSession, user_id: int, request_type: Opti
 
 
 async def get_user_by_email(db: AsyncSession, email: str):
-    # Используем асинхронный подход с select и execute
     result = await db.execute(select(models.User).filter(models.User.email == email))
     return result.scalars().first()
 
@@ -48,8 +46,7 @@ async def create_user(db: AsyncSession, user: user_schema.UserCreate):
     return db_user
 
 async def update_user(db: AsyncSession, user: models.User, update_data: user_schema.UserUpdate) -> models.User:
-    # model_dump(exclude_unset=True) вернет словарь только с теми полями,
-    # которые действительно были переданы клиентом для обновления.
+
     update_data_dict = update_data.model_dump(exclude_unset=True)
     
     for key, value in update_data_dict.items():
